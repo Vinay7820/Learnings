@@ -1,0 +1,113 @@
+When you define a custom class in Python and then try to print one of its instances to the console (or inspect it in an interpreter session), you get a relatively unsatisfying result.
+
+The default “to string” conversion behavior is basic and lacks detail:
+
+class Car:
+    def __init__(self, color, mileage):
+        self.color = color
+        self.mileage = mileage
+
+>>> my_car = Car('red', 37281)
+>>> print(my_car)
+<__console__.Car object at 0x109b73da0>
+>>> my_car
+<__console__.Car object at 0x109b73da0>
+By default all you get is a string containing the class name and the id of the object instance (which is the object’s memory address in CPython.) That’s better than nothing, but it’s also not very useful.
+
+You might find yourself trying to work around this by printing attributes of the class directly, or even by adding a custom to_string() method to your classes:
+
+>>> print(my_car.color, my_car.mileage)
+red 37281
+The general idea here is the right one—but it ignores the conventions and built-in mechanisms Python uses to handle how objects are represented as strings.
+
+How to Support “To String” Conversion in Your Python Classes?
+Instead of building your own class-to-string conversion machinery, modelled after Java’s toString() methods, you’ll be better off adding the __str__ and  __repr__ “dunder” methods to your class. They are the Pythonic way to control how objects are converted to strings in different situations. You can learn more about this in the Python data model documentation.
+
+Let’s take a look at how these methods work in practice. To get started, we’re going to add a __str__ method to the Car class we defined earlier:
+
+class Car:
+    def __init__(self, color, mileage):
+        self.color = color
+        self.mileage = mileage
+
+    def __str__(self):
+        return f'a {self.color} car'
+When you try printing or inspecting a Car instance now, you’ll get a different, slightly improved result:
+
+>>> my_car = Car('red', 37281)
+>>> print(my_car)
+'a red car'
+>>> my_car
+<__console__.Car object at 0x109ca24e0>
+Inspecting the car object in the console still gives us the previous result containing the object’s id. But printing the object resulted in the string returned by the  __str__ method we added.
+
+__str__ is one of Python’s “dunder” (double-underscore) methods and gets called when you try to convert an object into a string through the various means that are available:
+
+>>> print(my_car)
+a red car
+>>> str(my_car)
+'a red car'
+>>> '{}'.format(my_car)
+'a red car'
+With a proper __str__ implementation, you won’t have to worry about printing object attributes directly or writing a separate to_string() function. It’s the Pythonic way to control string conversion.
+
+By the way, some people refer to Python’s “dunder” methods as “magic methods.” But these methods are not supposed to be magical in any way. The fact that these methods start and end in double underscores is simply a naming convention to flag them as core Python features. It also helps avoid naming collisions with your own methods and attributes. The object constructor __init__ follows the same convention, and there’s nothing magical or arcane about it.
+
+Don’t be afraid to use Python’s dunder methods—they’re meant to help you.
+
+Python’s __repr__ vs __str__: What Is the Difference Between Them?
+Now, our string conversion story doesn’t end there. Did you see how inspecting  my_car in an interpreter session still gave that odd <Car object at ...> result?
+
+This happened because there are actually two dunder methods that control how objects are converted to strings in Python 3. The first one is __str__, and you just learned about it. The second one is __repr__, and the way it works is similar to  __str__, but it is used in different situations. (Python 2.x also has a __unicode__ method that I’ll touch on a little later.)
+
+Here’s a simple experiment you can use to get a feel for when __str__ or  __repr__ is used. Let’s redefine our car class so it contains both to-string dunder methods with outputs that are easy to distinguish:
+
+class Car:
+    def __init__(self, color, mileage):
+        self.color = color
+        self.mileage = mileage
+
+    def __repr__(self):
+        return '__repr__ for Car'
+
+    def __str__(self):
+        return '__str__ for Car'
+Now, when you play through the previous examples you can see which method controls the string conversion result in each case:
+
+>>> my_car = Car('red', 37281)
+>>> print(my_car)
+__str__ for Car
+>>> '{}'.format(my_car)
+'__str__ for Car'
+>>> my_car
+__repr__ for Car
+This experiment confirms that inspecting an object in a Python interpreter session simply prints the result of the object’s __repr__.
+
+Interestingly, containers like lists and dicts always use the result of __repr__ to represent the objects they contain. Even if you call str on the container itself:
+
+str([my_car])
+'[__repr__ for Car]'
+To manually choose between both string conversion methods, for example, to express your code’s intent more clearly, it’s best to use the built-in str() and  repr() functions. Using them is preferable over calling the object’s __str__ or  __repr__ directly, as it looks nicer and gives the same result:
+
+>>> str(my_car)
+'__str__ for Car'
+>>> repr(my_car)
+'__repr__ for Car'
+Even with this investigation complete, you might be wondering what the “real-world” difference is between __str__ and __repr__. They both seem to serve the same purpose, so it might be unclear when to use each.
+
+With questions like that, it’s usually a good idea to look into what the Python standard library does. Time to devise another experiment. We’ll create a  datetime.date object and find out how it uses __repr__ and __str__ to control string conversion:
+
+>>> import datetime
+>>> today = datetime.date.today()
+The result of the date object’s __str__ function should primarily be readable.
+
+It’s meant to return a concise textual representation for human consumption—something you’d feel comfortable displaying to a user. Therefore, we get something that looks like an ISO date format when we call str() on the date object:
+
+>>> str(today)
+'2017-02-02'
+With __repr__, the idea is that its result should be, above all, unambiguous.
+
+The resulting string is intended more as a debugging aid for developers. And for that it needs to be as explicit as possible about what this object is. That’s why you’ll get a more elaborate result calling repr() on the object. It even includes the full module and class name:
+
+>>> repr(today)
+'datetime.date(2017, 2, 2)'

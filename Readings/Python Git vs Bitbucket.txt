@@ -1,0 +1,12 @@
+Bitbucket:
+Supported VCS - Mercurial, Git.
+Private repos - Free up to 5 users.
+Integration - Jira, Crucible, Jenkins, Bamboo.
+
+
+
+Github:
+
+Supported VCS - Git.
+Private repos - Starts at $7/month for unlimited users.
+Integration - Asana, Zendesk, CloudBees, Travis, CodeClimate, AWS, Windows Azure, Google Cloud, and Heroku.

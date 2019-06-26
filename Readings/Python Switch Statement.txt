@@ -1,0 +1,53 @@
+Unlike every other programming language we have used before, Python does not have a switch or case statement. To get around this fact, we use dictionary mapping.
+
+# Function to convert number into string 
+# Switcher is dictionary data type here 
+def numbers_to_strings(argument): 
+    switcher = { 
+        0: "zero", 
+        1: "one", 
+        2: "two", 
+    } 
+  
+    # get() method of dictionary data type returns  
+    # value of passed argument if it is present  
+    # in dictionary otherwise second argument will 
+    # be assigned as default value of passed argument 
+    return switcher.get(argument, "nothing") 
+  
+# Driver program 
+if __name__ == "__main__": 
+    argument=0
+    print numbers_to_strings(argument)
+	
+	
+Using Python Functions & Lambdas:
+>>> def zero():
+        return 'zero'
+>>> def one():
+        return 'one'
+>>> def indirect(i):
+        switcher={
+                0:zero,
+                1:one,
+                2:lambda:'two'
+                }
+        func=switcher.get(i,lambda :'Invalid')
+        return func()
+>>> indirect(4)
+
+
+With Python Classes:
+>>> class Switcher(object):
+          def indirect(self,i):
+                   method_name='number_'+str(i)
+                   method=getattr(self,method_name,lambda :'Invalid')
+                   return method()
+          def number_0(self):
+                   return 'zero'
+          def number_1(self):
+                   return 'one'
+          def number_2(self):
+                   return 'two'
+>>> s=Switcher()
+>>> s.indirect(2)
