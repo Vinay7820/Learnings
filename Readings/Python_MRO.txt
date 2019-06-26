@@ -1,0 +1,126 @@
+MRO or Method Resolution Order is the hierarchy in which base classes are searched when looking for a method in the parent class.
+
+class A:
+	def whereiam(self):
+		print "I am in A"
+	
+class B(A):
+	def whereiam(self):
+		print "I am in B"
+	
+class C(A):
+	def whereiam(self):
+		print "I am in C"
+				
+class D(B, C):
+	def whereiam(self):
+		print "I am in D"
+		
+>>>d = D()
+>>>d.whereiam()
+I am in D
+
+But what if we comment or remove the whereiam method in D? Let us do this and understand what happens next.
+
+class A:
+	def whereiam(self):
+		print "I am in A"
+	
+class B(A):
+	def whereiam(self):
+		print "I am in B"
+	
+class C(A):
+	def whereiam(self):
+		print "I am in C"
+			
+class D(B, C):
+    pass
+	
+>>>d = D()
+>>>d.whereiam()
+I am in B
+
+Old style classes use DLR or depth-first left to right algorithm whereas new style classes use C3 Linearization algorithm for method resolution while doing multiple inheritance.
+
+DLR Algorithm - The algorithm first looks into the instance class for the invoked method. If not present, then it looks into the first parent, if that too is not present then parent of the parent is looked into. This continues till the end of the depth of class and finally, till the end of inherited classes. So, the resolution order in our last example will be D, B, A, C, A. But, A cannot be twice present thus, the order will be D, B, A, C.
+
+But, this algorithm is not monotonic and shows anomalous behavior at times, as shown in the example below
+
+class A: pass
+class B: pass
+class C(A, B): pass
+class D(B, A): pass
+class E(C,D): pass
+According to the DLR algorithm, the method resolution should be E, C, D, B, A. But the interchange of A & B is very ambiguous and it could be the other way round.
+
+C3 Linearization Algorithm - enforces following 2 constraints:
+1) Children precede their parents
+2) If a class inherits from multiple classes, they are kept in the order specified in the tuple of the base class.
+
+C3 Linearization Algorithm - The C3 superclass linearization of a class is the sum of the class plus a unique merge of the linearizations of its parents and a list of the parents itself. The list of parents as the last argument to the merge process preserves the local precedence order of direct parent classes
+
+The merge of parents' linearizations and parents list is done by selecting the first head of the lists which does not appear in the tail (all elements of a list except the first) of any of the lists. Note, that a good head may appear as the first element in multiple lists at the same time, but it is forbidden to appear anywhere else. The selected element is removed from all the lists where it appears as a head and appended to the output list. The process of selecting and removing a good head to extend the output list is repeated until all remaining lists are exhausted. If at some point no good head can be selected, because the heads of all remaining lists appear in any one tail of the lists, then the merge is impossible to compute due to inconsistent orderings of dependencies in the inheritance hierarchy and no linearization of the original class exists.
+
+class O
+class A extends O
+class B extends O
+class C extends O
+class D extends O
+class E extends O
+class K1 extends A, B, C
+class K2 extends D, B, E
+class K3 extends D, A
+class Z extends K1, K2, K3
+
+L(O)  := [O]                                                // the linearization of O is trivially the singleton list [O], because O has no parents
+
+L(A)  := [A] + merge(L(O), [O])                             // the linearization of A is A plus the merge of its parents' linearizations with the list of parents...
+       = [A] + merge([O], [O])
+       = [A, O]                                             // ...which simply prepends A to its single parent's linearization
+
+L(B)  := [B, O]                                             // linearizations of B, C, D and E are computed similar to that of A
+L(C)  := [C, O]
+L(D)  := [D, O]
+L(E)  := [E, O]
+
+L(K1) := [K1] + merge(L(A), L(B), L(C), [A, B, C])          // first, find the linearizations of K1's parents, L(A), L(B), and L(C), and merge them with the parent list [A, B, C]
+       = [K1] + merge([A, O], [B, O], [C, O], [A, B, C])    // class A is a good candidate for the first merge step, because it only appears as the head of the first and last lists
+       = [K1, A] + merge([O], [B, O], [C, O], [B, C])       // class O is not a good candidate for the next merge step, because it also appears in the tails of list 2 and 3; but class B is a good candidate
+       = [K1, A, B] + merge([O], [O], [C, O], [C])          // class C is a good candidate; class O still appears in the tail of list 3
+       = [K1, A, B, C] + merge([O], [O], [O])               // finally, class O is a valid candidate, which also exhausts all remaining lists
+       = [K1, A, B, C, O]
+
+L(K2) := [K2] + merge(L(D), L(B), L(E), [D, B, E])
+       = [K2] + merge([D, O], [B, O], [E, O], [D, B, E])    // select D
+       = [K2, D] + merge([O], [B, O], [E, O], [B, E])       // fail O, select B
+       = [K2, D, B] + merge([O], [O], [E, O], [E])          // fail O, select E
+       = [K2, D, B, E] + merge([O], [O], [O])               // select O
+       = [K2, D, B, E, O]
+
+L(K3) := [K3] + merge(L(D), L(A), [D, A])
+       = [K3] + merge([D, O], [A, O], [D, A])               // select D
+       = [K3, D] + merge([O], [A, O], [A])                  // fail O, select A
+       = [K3, D, A] + merge([O], [O])                       // select O
+       = [K3, D, A, O]
+
+L(Z)  := [Z] + merge(L(K1), L(K2), L(K3), [K1, K2, K3])
+       = [Z] + merge([K1, A, B, C, O], [K2, D, B, E, O], [K3, D, A, O], [K1, K2, K3])    // select K1
+       = [Z, K1] + merge([A, B, C, O], [K2, D, B, E, O], [K3, D, A, O], [K2, K3])        // fail A, select K2
+       = [Z, K1, K2] + merge([A, B, C, O], [D, B, E, O], [K3, D, A, O], [K3])            // fail A, fail D, select K3
+       = [Z, K1, K2, K3] + merge([A, B, C, O], [D, B, E, O], [D, A, O])                  // fail A, select D
+       = [Z, K1, K2, K3, D] + merge([A, B, C, O], [B, E, O], [A, O])                     // select A
+       = [Z, K1, K2, K3, D, A] + merge([B, C, O], [B, E, O], [O])                        // select B
+       = [Z, K1, K2, K3, D, A, B] + merge([C, O], [E, O], [O])                           // select C
+       = [Z, K1, K2, K3, D, A, B, C] + merge([O], [E, O], [O])                           // fail O, select E
+       = [Z, K1, K2, K3, D, A, B, C, E] + merge([O], [O], [O])                           // select O
+       = [Z, K1, K2, K3, D, A, B, C, E, O]                                               // done
+	   
+class F(): pass
+class E(): pass
+class D(): pass
+class C(D,F): pass
+class B(D,E): pass
+class A(B,C): pass
+print(A.mro())
+[<class '__main__.A'>, <class '__main__.B'>, <class '__main__.C'>, <class '__main__.D'>, <class '__main__.E'>, <class '__main__.F'>, <class 'object'>]
